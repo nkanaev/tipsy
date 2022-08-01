@@ -24,8 +24,3 @@ tipsy: $(OBJS)
 clean:
 	rm -f $(OBJS)
 	rm -f tipsy
-
-MENUDIR = .
-
-menu: tipsy
-	find $(MENUDIR) -name '*.obj' | fzy | tr '\n' '\0' | xargs -0 ./tipsy
