@@ -8,12 +8,7 @@
   * lack of subpixel rasterization (polygon jittering/wobble)
   * old shading techniques (flat & Gouraud)
 
-> Whatever you now find weird, ugly, uncomfortable and nasty about a new medium
-> will surely become its signature. CD distortion, the jitteriness of
-> digital video, the crap sound of 8-bit - all of these will be cherished
-> and emulated as soon as they can be avoided...
->
-> ― Brian Eno, A Year With Swollen Appendices
+https://user-images.githubusercontent.com/4911300/182365285-0148b08a-5b33-4bf3-9e48-d0fdd7f286bd.mp4
 
 ## building
 
