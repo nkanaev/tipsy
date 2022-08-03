@@ -67,3 +67,5 @@ https://user-images.githubusercontent.com/4911300/182365285-0148b08a-5b33-4bf3-9
   Provides a good overview of the PSX architecture.
 * [gel](https://github.com/glouw/gel)
   by Gustav Louw. Similar project with the same spirit.
+* [tigr](https://github.com/erkkah/tigr)
+  by Erik Agsjö. The graphics library the project relies on.
