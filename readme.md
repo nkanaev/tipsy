@@ -5,6 +5,7 @@
   * low resolution display (320x240)
   * no texture filtering (pixelated textures)
   * affine texture mapping (warped textures)
+  * no anti-aliasing (chunky edges)
   * lack of subpixel rasterization (polygon jittering/wobble)
   * old shading techniques (flat & Gouraud)
 
