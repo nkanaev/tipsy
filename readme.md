@@ -3,7 +3,7 @@
   *tipsy* (tiny playstationy) is a PS1-like software renderer written in ~500 lines of C99.\
   Features all the charm of the original PS1, like:
   * low resolution display (320x240)
-  * lack of anti-aliasing (pixelated textures)
+  * no texture filtering (pixelated textures)
   * affine texture mapping (warped textures)
   * lack of subpixel rasterization (polygon jittering/wobble)
   * old shading techniques (flat & Gouraud)
