@@ -535,7 +535,8 @@ int main(int argc, char **argv) {
   TPixel colorBlack = tigrRGB(0, 0, 0);
 
   State state = {
-    .draw_wireframe=0, .use_zbuffer=0, .use_pcorrect=0,
+    .draw_wireframe=(obj->mtl == NULL),
+    .use_zbuffer=0, .use_pcorrect=0,
     .inv_bculling=0, .jitter=1,
   };
   state.zbuff = malloc(sizeof(float) * (WIDTH * HEIGHT));
