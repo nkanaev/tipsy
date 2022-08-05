@@ -1,4 +1,4 @@
-CFLAGS = -Wall
+CFLAGS = -Wall -Wextra
 SRCS = $(wildcard src/*.c)
 OBJS = $(SRCS:.c=.o)
 

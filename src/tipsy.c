@@ -38,12 +38,12 @@ static void debug(char *fmt, ...) {
 */
 
 static int readline(char **buf, size_t *buflen, FILE *f) {
-  char ch;
-  int i = 0;
+  size_t i = 0;
+  int ch;
   while ((ch = fgetc(f)) != EOF && ch != '\n') {
     if (ch == '\r') continue;
     if (i + 2 >= *buflen) *buf = realloc(*buf, *buflen = *buflen + 1024);
-    (*buf)[i++] = ch;
+    (*buf)[i++] = (unsigned char)ch;
   }
   (*buf)[i] = '\0';
   return ch == EOF ? -1 : 0;
@@ -435,7 +435,7 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
 
   for (int y = minY; y < maxY; y++) {
     for (int x = minX; x < maxX; x++) {
-      Vec p = {x, y};
+      Vec p = {x, y, 0};
       Vec bc = barycenter(p, sf.v1, sf.v2, sf.v3);
       float err = -0.0001;
       if (bc.x >= err && bc.y >= err && bc.z >= err) {
