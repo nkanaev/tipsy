@@ -11,22 +11,20 @@
 
 https://user-images.githubusercontent.com/4911300/182365285-0148b08a-5b33-4bf3-9e48-d0fdd7f286bd.mp4
 
-## building prerequisites
-
-  On Ubuntu 20.04
-  
-  ```sh
-  sudo apt update
-  sudo apt install -y build-essential x11proto-core-dev libx11-dev mesa-common-dev libglu1-mesa-dev
-  ```
-
 ## building
 
-  Building requires C99 compiler & OpenGL (see `makefile`).
+  Building requires C99 compiler & OpenGL.
+  Supported platforms & building prerequisites are provided below:
+  
+  * Linux
+  
+        # ubuntu 22.04
+        sudo apt install -y build-essential libglu1-mesa-dev
 
-  The project should compile on:
-  * Linux (tested on Ubuntu 20.04)
-  * MacOS (tested on Monterey)
+  * MacOS
+  
+    Install Xcode. MacOS Monterey ships with (now deprecated) OpenGL by default.
+  
   * Windows (untested)
 
   Get the source & run:
