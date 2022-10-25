@@ -11,6 +11,8 @@
 
 https://user-images.githubusercontent.com/4911300/182365285-0148b08a-5b33-4bf3-9e48-d0fdd7f286bd.mp4
 
+Models, for educational purposes, can be found here: https://www.models-resource.com/playstation/
+
 ## building
 
   Building requires C99 compiler & OpenGL.
