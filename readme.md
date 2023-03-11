@@ -23,6 +23,9 @@ Models, for educational purposes, can be found here: https://www.models-resource
         # ubuntu 22.04
         sudo apt install -y build-essential libglu1-mesa-dev
 
+        # fedora 37
+        sudo dnf install -y gcc mesa-libGLU-devel
+
   * MacOS
   
     Install Xcode. MacOS Monterey ships with (now deprecated) OpenGL by default.
