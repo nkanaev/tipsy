@@ -151,7 +151,9 @@ void list_sort(list *l, int (*comp)(const void *, const void *)) {
 // math
 
 typedef struct {
-  float x, y, z;
+  float x;
+  float y;
+  float z;
 } Vec;
 
 float vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
