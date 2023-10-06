@@ -19,7 +19,7 @@
 #define HEIGHT 240
 #define FPS 30
 #define DISTANCE 5
-#define SCALE 0.75F
+#define SCALE ((float)HEIGHT / WIDTH)
 
 #define VREF(x) (*(Vec *)(x))
 
@@ -37,15 +37,13 @@ static void error(char *fmt, ...) {
   exit(1);
 }
 
-/*
 static void debug(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(stdout, fmt, ap);
-  fprintf(stdout, "\n");
-  fflush(stdout);
+  (void)vfprintf(stdout, fmt, ap);
+  (void)fprintf(stdout, "\n");
+  (void)fflush(stdout);
 }
-*/
 
 static int readline(char *buf[], size_t *buflen, FILE *f) {
   assert(buflen != NULL);
@@ -125,7 +123,7 @@ void list_del(list *l) {
 
 void list_add(list *l, void *obj) {
   if (l->len >= l->cap) {
-    int new_cap = (l->cap != 0) ? (l->cap * 2) : 2;
+    const int new_cap = (l->cap != 0) ? (l->cap * 2) : 2;
     void *temp = realloc(l->p, (long long)l->size * new_cap);
     if (temp == NULL) {
       return;
@@ -133,7 +131,7 @@ void list_add(list *l, void *obj) {
     l->p = temp;
     l->cap = new_cap;
   }
-  memcpy(l->p + ((ptrdiff_t)l->size * l->len), obj, l->size);
+  memcpy(offset_pointer(l->p, l->size * l->len), obj, l->size);
   ++l->len;
 }
 
@@ -141,7 +139,7 @@ void *list_get(list *l, int idx) {
   if (idx >= l->len) {
     return NULL;
   }
-  return l->p + (ptrdiff_t)l->size * idx;
+  return offset_pointer(l->p, l->size * idx);
 }
 
 void list_sort(list *l, int (*comp)(const void *, const void *)) {
@@ -189,19 +187,24 @@ static inline Vec vec_cross(Vec a, Vec b) {
                  a.x * b.y - a.y * b.x);
 }
 
+static inline float vec_wedge(Vec a, Vec b) { return vec_cross(a, b).z; }
+
+// `v' := [<v, x>, <v, y>, <v, z>]`
 static inline Vec perspective(Vec v, Vec x, Vec y, Vec z) {
   return vec_set(vec_dot(v, x), vec_dot(v, y), vec_dot(v, z));
 }
 
 Vec project(Vec v0, int snap) {
-  float ud = DISTANCE;
-  float us = ud - 1;
-  float vs = fminf(HEIGHT, WIDTH) / 2.0F * SCALE;
+  const float ud = DISTANCE;
+  const float us = ud - 1.0F;
+  const float ndc_dim = 2.0F;
 
-  Vec v1 = {(v0.x * us) / (v0.z + ud), (v0.y * us) / (v0.z + ud),
-            (v0.z * us) / (v0.z + ud)};
-  Vec v2 = {v1.x * vs + WIDTH / 2.0F, v1.y * vs + HEIGHT / 2.0F,
-            v1.z + DISTANCE};
+  const float vs = (fminf(HEIGHT, WIDTH) / ndc_dim) * SCALE;
+
+  Vec v1 = vec_set((v0.x * us) / (v0.z + ud), (v0.y * us) / (v0.z + ud),
+                   (v0.z * us) / (v0.z + ud));
+  Vec v2 = vec_set((v1.x * vs) + (WIDTH / ndc_dim),
+                   (v1.y * vs) + (HEIGHT / ndc_dim), v1.z + DISTANCE);
 
   if (snap) {
     v2.x = floorf(v2.x);
@@ -211,11 +214,14 @@ Vec project(Vec v0, int snap) {
   return v2;
 }
 
-Vec barycenter(Vec p, Vec v1, Vec v2, Vec v3) {
-  float d = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
-  float u = ((v2.y - v3.y) * (p.x - v3.x) + (v3.x - v2.x) * (p.y - v3.y)) / d;
-  float v = ((v3.y - v1.y) * (p.x - v3.x) + (v1.x - v3.x) * (p.y - v3.y)) / d;
-  return vec_set(u, v, 1.0F - u - v);
+Vec barycenter(Vec p, Vec a, Vec b, Vec c) {
+  const Vec ab = vec_sub(b, a);
+  const Vec ac = vec_sub(c, a);
+  const Vec ap = vec_sub(p, a);
+  const float area_abc = vec_wedge(ab, ac);
+  const float beta = vec_wedge(ap, ac) / area_abc;
+  const float gamma = vec_wedge(ab, ap) / area_abc;
+  return vec_set(1.0F - beta - gamma, beta, gamma);
 }
 
 // obj/mtl
@@ -522,7 +528,8 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
   Vec vn3;
 
   if (state.shading == SHADING_FLAT) {
-    Vec bc = {0.333F, 0.333F, 0.333F};
+    const float one_third = 0.333F;
+    Vec bc = vec_fill(one_third);
     shading = shade(sf.nrm, bc);
   }
   if (state.shading == SHADING_GOURAUD) {
