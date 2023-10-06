@@ -152,9 +152,12 @@ typedef struct {
   float x;
   float y;
   float z;
+  float w;
 } Vec;
 
-static inline Vec vec_set(float x, float y, float z) { return (Vec){x, y, z}; }
+static inline Vec vec_set(float x, float y, float z) {
+  return (Vec){x, y, z, 0.0F};
+}
 
 static inline Vec vec_fill(float s) { return vec_set(s, s, s); }
 
@@ -570,9 +573,9 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
 
   int shading = -1;
   int has_normals = 0;
-  Vec vn1;
-  Vec vn2;
-  Vec vn3;
+  Vec vn1 = {0};
+  Vec vn2 = {0};
+  Vec vn3 = {0};
 
   if (state.shading == SHADING_FLAT) {
     const float one_third = 0.333F;
