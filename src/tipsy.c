@@ -227,6 +227,14 @@ Vec barycenter(Vec p, Vec a, Vec b, Vec c) {
 
 // obj/mtl
 
+typedef struct {
+  int x;
+  int y;
+  int z;
+} Int3;
+
+static inline Int3 int3_set(int x, int y, int z) { return (Int3){x, y, z}; }
+
 typedef struct Mtl {
   char *name;
   Tigr *map_Ka, *map_Kd;
