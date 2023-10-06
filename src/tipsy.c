@@ -158,8 +158,20 @@ typedef struct {
 typedef Float4 Vec;
 typedef Float4 Quaternion;
 
+static inline Float4 float4_set(float x, float y, float z, float w) {
+  return (Float4){x, y, z, w};
+}
+
+static inline Float4 float4_set_w(const Float4 a, float w) {
+  return float4_set(a.x, a.y, a.z, w);
+}
+
+static inline Quaternion quaternion_set(float s, Vec v) {
+  return float4_set(v.x, v.y, v.z, s);
+}
+
 static inline Vec vec_set(float x, float y, float z) {
-  return (Vec){x, y, z, 0.0F};
+  return float4_set(x, y, z, 0.0F);
 }
 
 static inline Vec vec_fill(float s) { return vec_set(s, s, s); }
@@ -194,6 +206,46 @@ static inline Vec vec_cross(Vec a, Vec b) {
 }
 
 static inline float vec_wedge(Vec a, Vec b) { return vec_cross(a, b).z; }
+
+static inline Quaternion quaternion_multiply(Quaternion a, Quaternion b) {
+  return float4_set(a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+                    a.w * b.y + a.y * b.w + a.z * b.x - a.x * b.z,
+                    a.w * b.z + a.z * b.w + a.x * b.y - a.y * b.x,
+                    a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z);
+}
+
+Quaternion quaternion_rotation_axis(Vec axis, float angle) {
+  const float half = 0.5F;
+  const float half_angle = angle * half;
+  return quaternion_set(cosf(half_angle), vec_scale(axis, sinf(half_angle)));
+}
+
+static inline Quaternion quaternion_conjugate(Quaternion q) {
+  return quaternion_set(q.w, vec_neg(q));
+}
+
+static inline float quaternion_length(Quaternion q) {
+  return sqrtf(vec_dot(q, q) + q.w * q.w);
+}
+
+static Quaternion quaternion_normalize(Quaternion q) {
+  const float len = quaternion_length(q);
+  return vec_scale(q, 1.0F / len);
+}
+
+static Quaternion quaternion_inverse(Quaternion q) {
+  const Quaternion conj = quaternion_conjugate(q);
+  const float len = quaternion_length(q);
+  return vec_scale(conj, 1.0F / (len * len));
+}
+
+Vec vec_rotate(Vec v, Quaternion rotor) {
+  const Quaternion qv = quaternion_set(0.0F, v);
+  const Quaternion conj = quaternion_conjugate(rotor);
+  const Quaternion rotated =
+      quaternion_multiply(quaternion_multiply(rotor, qv), conj);
+  return float4_set_w(rotated, 0.0F);
+}
 
 // `v' := [<v, x>, <v, y>, <v, z>]`
 static inline Vec perspective(Vec v, Vec x, Vec y, Vec z) {
@@ -831,9 +883,23 @@ int main(int argc, char *argv[]) {
 
     rotX = fminf(PI / 2, fmaxf(rotX, -PI / 2));
 
-    Vec z = {cosf(rotX) * sinf(rotY), -sinf(rotX), cosf(rotX) * cosf(rotY)};
-    Vec x = vec_nrm(vec_cross(upward, z));
-    Vec y = vec_cross(z, x);
+    const Quaternion rotor_x =
+        quaternion_rotation_axis(vec_set(1.0F, 0.0F, 0.0F), rotX);
+    const Quaternion rotor_y =
+        quaternion_rotation_axis(vec_set(0.0F, 1.0F, 0.0F), rotY);
+    Vec z = vec_rotate(upward, rotor_y);
+    z = vec_rotate(z, rotor_y);
+
+    // Define the world axes.
+    const Vec world_x = vec_set(1.0F, 0.0F, 0.0F);
+    const Vec world_y = vec_set(0.0F, 1.0F, 0.0F);
+    const Vec world_z = vec_set(0.0F, 0.0F, 1.0F);
+
+    // Rotate the world axes.
+    Vec x = vec_rotate(world_x, rotor_x);
+    x = vec_rotate(x, rotor_y);
+    Vec y = vec_rotate(world_y, rotor_x);
+    y = vec_rotate(y, rotor_y);
 
     if (state.use_zbuffer) {
       if (state.use_zbuffer) {
