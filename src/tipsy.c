@@ -7,12 +7,13 @@
 #include <limits.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tigr.h>
 
-#define PI 3.14159
+#define PI 3.14159F
 #define WIDTH 320
 #define HEIGHT 240
 #define FPS 30
@@ -26,8 +27,8 @@
 static void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  fprintf(stderr, "\n");
+  (void)vfprintf(stderr, fmt, ap);
+  (void)fprintf(stderr, "\n");
   exit(1);
 }
 
@@ -45,8 +46,12 @@ static int readline(char **buf, size_t *buflen, FILE *f) {
   size_t i = 0;
   int ch;
   while ((ch = fgetc(f)) != EOF && ch != '\n') {
-    if (ch == '\r') continue;
-    if (i + 2 >= *buflen) *buf = realloc(*buf, *buflen = *buflen + 1024);
+    if (ch == '\r') {
+      continue;
+    }
+    if (i + 2 >= *buflen) {
+      *buf = realloc(*buf, *buflen = *buflen + 1024);
+    }
     (*buf)[i++] = (unsigned char)ch;
   }
   (*buf)[i] = '\0';
@@ -62,7 +67,9 @@ char *relpath(const char *name, const char *path) {
   size_t ln = strlen(name);
   size_t lp = strlen(path);
 
-  while (lp > 0 && path[lp] != DIR_SEP) lp--;
+  while (lp > 0 && path[lp] != DIR_SEP) {
+    lp--;
+  }
 
   size_t lt = ln + lp + 1;
 
@@ -77,7 +84,9 @@ char *relpath(const char *name, const char *path) {
 
 char *trim(char *s) {
   char c;
-  while ((c = s[0]) != '\0' && isspace(c)) s++;
+  while ((c = s[0]) != '\0' && isspace(c)) {
+    ++s;
+  }
   return s;
 }
 
@@ -101,13 +110,22 @@ void list_del(list *l) {
 
 void list_add(list *l, void *obj) {
   if (l->len >= l->cap) {
-    l->p = realloc(l->p, l->size * (l->cap = l->cap * 2 ?: 2));
+    int new_cap = (l->cap != 0) ? (l->cap * 2) : 2;
+    void *temp = realloc(l->p, (long long)l->size * new_cap);
+    if (temp == NULL) {
+      return;
+    }
+    l->p = temp;
+    l->cap = new_cap;
   }
-  memcpy(l->p + (l->size * l->len++), obj, l->size);
+  memcpy(l->p + ((ptrdiff_t)l->size * l->len), obj, l->size);
+  ++l->len;
 }
 
 void *list_get(list *l, int idx) {
-  if (idx >= l->len) return NULL;
+  if (idx >= l->len) {
+    return NULL;
+  }
   return l->p + l->size * idx;
 }
 
@@ -460,25 +478,28 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
       vt2 = VREF(list_get(obj->vt, f.vt2 - 1)),
       vt3 = VREF(list_get(obj->vt, f.vt3 - 1));
 
-  int minX = fminf(fminf(sf.v1.x, sf.v2.x), sf.v3.x),
-      maxX = fmaxf(fmaxf(sf.v1.x, sf.v2.x), sf.v3.x) + 1,
-      minY = fminf(fminf(sf.v1.y, sf.v2.y), sf.v3.y),
-      maxY = fmaxf(fmaxf(sf.v1.y, sf.v2.y), sf.v3.y) + 1;
+  int minX = (int)fminf(fminf(sf.v1.x, sf.v2.x), sf.v3.x),
+      maxX = (int)fmaxf(fmaxf(sf.v1.x, sf.v2.x), sf.v3.x) + 1,
+      minY = (int)fminf(fminf(sf.v1.y, sf.v2.y), sf.v3.y),
+      maxY = (int)fmaxf(fmaxf(sf.v1.y, sf.v2.y), sf.v3.y) + 1;
 
   for (int y = minY; y < maxY; y++) {
     for (int x = minX; x < maxX; x++) {
-      Vec p = {x, y, 0};
+      Vec p = {(float)x, (float)y, 0};
       Vec bc = barycenter(p, sf.v1, sf.v2, sf.v3);
-      float err = -0.0001;
+      const float err = -1E-4F;
       if (bc.x >= err && bc.y >= err && bc.z >= err) {
         if (state.use_zbuffer) {
           float z = bc.x * sf.v1.z + bc.y * sf.v2.z + bc.z * sf.v3.z;
           int zbuff_idx = y * WIDTH + x;
-          if (z > state.zbuff[zbuff_idx]) continue;
+          if (z > state.zbuff[zbuff_idx]) {
+            continue;
+          }
           state.zbuff[zbuff_idx] = z;
         }
 
-        float u, v;
+        float u = {0};
+        float v = {0};
 
         if (state.use_pcorrect) {
           Vec bcc = bc;
@@ -491,22 +512,23 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
           bcc.z = bcc.z / bd;
 
           u = bcc.x * vt1.x + bcc.y * vt2.x + bcc.z * vt3.x;
-          v = 1.0 - (bcc.x * vt1.y + bcc.y * vt2.y + bcc.z * vt3.y);
+          v = 1.0F - (bcc.x * vt1.y + bcc.y * vt2.y + bcc.z * vt3.y);
         } else {
           u = bc.x * vt1.x + bc.y * vt2.x + bc.z * vt3.x;
-          v = 1.0 - (bc.x * vt1.y + bc.y * vt2.y + bc.z * vt3.y);
+          v = 1.0F - (bc.x * vt1.y + bc.y * vt2.y + bc.z * vt3.y);
         }
 
-        int tx = texture->w * u;
-        int ty = texture->h * v;
+        int tx = (int)((float)texture->w * u);
+        int ty = (int)((float)texture->h * v);
 
         TPixel texel = tigrGet(texture, tx % texture->w, ty % texture->h);
 
         if (state.shading == SHADING_GOURAUD && has_normals) {
-          int s1 = shade(vn1, bc);
-          int s2 = shade(vn2, bc);
-          int s3 = shade(vn3, bc);
-          shading = bc.x * s1 + bc.y * s2 + bc.z * s3;
+          const int s1 = shade(vn1, bc);
+          const int s2 = shade(vn2, bc);
+          const int s3 = shade(vn3, bc);
+          shading =
+              (int)(bc.x * (float)s1 + bc.y * (float)s2 + bc.z * (float)s3);
         }
 
         if (shading >= 0) {
@@ -629,9 +651,8 @@ int main(int argc, char **argv) {
     if (!input) {
       tigrUpdate(screen);
       continue;
-    } else {
-      input = 0;
     }
+    input = 0;
 
     rotX = fminf(PI / 2, fmaxf(rotX, -PI / 2));
 
