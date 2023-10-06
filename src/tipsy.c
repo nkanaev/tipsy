@@ -535,11 +535,20 @@ int surface_cmp(const void *a, const void *b) {
   return apoints - bpoints;
 }
 
+static inline float clamp(float val, float min, float max) {
+  return fminf(fmaxf(val, min), max);
+}
+
 int shade(Vec nrm, Vec bc) {
-  static Vec lights = {-1, -1, -1};
-  Vec var = {vec_dot(lights, nrm), vec_dot(lights, nrm), vec_dot(lights, nrm)};
-  float intensity = vec_dot(bc, var);
-  return 0xFF * fminf(fmaxf(0.3F, intensity), 1);
+  static Vec lights = {-1.0F, -1.0F, -1.0F};
+  const Vec var = {vec_dot(lights, nrm), vec_dot(lights, nrm),
+                   vec_dot(lights, nrm)};
+  const float intensity = vec_dot(bc, var);
+  const float min_intensity = 0.3F;
+  const float max_intensity = 1.0F;
+  const float max_color_value = 255.0F;
+  return (int)(max_color_value *
+               clamp(intensity, min_intensity, max_intensity));
 }
 
 void draw_wireframe(Tigr *scr, Surface sf, TPixel color) {
