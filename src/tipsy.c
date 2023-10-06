@@ -215,8 +215,7 @@ Vec barycenter(Vec p, Vec v1, Vec v2, Vec v3) {
   float d = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
   float u = ((v2.y - v3.y) * (p.x - v3.x) + (v3.x - v2.x) * (p.y - v3.y)) / d;
   float v = ((v3.y - v1.y) * (p.x - v3.x) + (v1.x - v3.x) * (p.y - v3.y)) / d;
-  float w = 1.0F - u - v;
-  return vec_set(u, v, w);
+  return vec_set(u, v, 1.0F - u - v);
 }
 
 // obj/mtl
