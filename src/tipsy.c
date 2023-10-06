@@ -178,9 +178,9 @@ static inline Vec vec_add(Vec a, Vec b) {
   return vec_set(a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
-static inline Vec vec_sub(Vec a, Vec b) {
-  return vec_set(a.x - b.x, a.y - b.y, a.z - b.z);
-}
+static inline Vec vec_neg(Vec a) { return vec_set(-a.x, -a.y, -a.z); }
+
+static inline Vec vec_sub(Vec a, Vec b) { return vec_add(a, vec_neg(b)); }
 
 static inline Vec vec_nrm(Vec a) { return vec_scale(a, 1.0F / vec_len(a)); }
 
