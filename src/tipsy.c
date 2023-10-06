@@ -153,7 +153,10 @@ typedef struct {
   float y;
   float z;
   float w;
-} Vec;
+} Float4;
+
+typedef Float4 Vec;
+typedef Float4 Quaternion;
 
 static inline Vec vec_set(float x, float y, float z) {
   return (Vec){x, y, z, 0.0F};
