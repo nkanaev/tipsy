@@ -1,2 +1,5 @@
 *.o
 tipsy
+build/
+.cache/
+temp/

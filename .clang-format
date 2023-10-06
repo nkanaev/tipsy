@@ -1,0 +1,4 @@
+BasedOnStyle: Google
+PointerAlignment: Left
+QualifierAlignment: Left
+SortIncludes: CaseSensitive

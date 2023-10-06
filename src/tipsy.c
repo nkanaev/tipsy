@@ -1,21 +1,25 @@
+#ifdef _WIN32
+#define _CRT_SECURE_NO_WARNINGS NOPE
+#endif
+
 #include <ctype.h>
+#include <float.h>
+#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <float.h>
-#include "tigr.h"
+#include <tigr.h>
 
-#define PI        3.14159
-#define WIDTH     320
-#define HEIGHT    240
-#define FPS       30
-#define DISTANCE  5
-#define SCALE     0.75
+#define PI 3.14159
+#define WIDTH 320
+#define HEIGHT 240
+#define FPS 30
+#define DISTANCE 5
+#define SCALE 0.75
 
-#define VREF(x) (*(Vec*)(x))
+#define VREF(x) (*(Vec *)(x))
 
 // util
 
@@ -51,21 +55,21 @@ static int readline(char **buf, size_t *buflen, FILE *f) {
 
 char *relpath(const char *name, const char *path) {
 #ifdef _WIN32
-  #define DIR_SEP '\\'
+#define DIR_SEP '\\'
 #else
-  #define DIR_SEP '/'
+#define DIR_SEP '/'
 #endif
   size_t ln = strlen(name);
   size_t lp = strlen(path);
 
-  while (lp>0 && path[lp] != DIR_SEP) lp--;
+  while (lp > 0 && path[lp] != DIR_SEP) lp--;
 
   size_t lt = ln + lp + 1;
 
-  char *out = malloc(sizeof(char)*(lt+1));
+  char *out = malloc(sizeof(char) * (lt + 1));
   strncpy(out, path, lp);
   out[lp] = DIR_SEP;
-  strncpy(&out[lp+1], name, ln);
+  strncpy(&out[lp + 1], name, ln);
   out[lt] = '\0';
 
   return out;
@@ -97,14 +101,14 @@ void list_del(list *l) {
 
 void list_add(list *l, void *obj) {
   if (l->len >= l->cap) {
-    l->p = realloc(l->p, l->size * (l->cap = l->cap*2 ?: 2));
+    l->p = realloc(l->p, l->size * (l->cap = l->cap * 2 ?: 2));
   }
-  memcpy(l->p+(l->size*l->len++), obj, l->size);
+  memcpy(l->p + (l->size * l->len++), obj, l->size);
 }
 
 void *list_get(list *l, int idx) {
   if (idx >= l->len) return NULL;
-  return l->p+l->size*idx;
+  return l->p + l->size * idx;
 }
 
 void list_sort(list *l, int (*comp)(const void *, const void *)) {
@@ -119,17 +123,23 @@ typedef struct {
 
 float vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 float vec_len(Vec a) { return sqrtf(vec_dot(a, a)); }
-int vec_eq(Vec a, Vec b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
-Vec vec_mul(Vec a, Vec b) { Vec c = {a.x * b.x, a.y * b.y, a.z * b.z}; return c; }
-Vec vec_add(Vec a, Vec b) { Vec c = {a.x + b.x, a.y + b.y, a.z + b.z}; return c; }
-Vec vec_sub(Vec a, Vec b) { Vec c = {a.x - b.x, a.y - b.y, a.z - b.z}; return c; }
+
+Vec vec_mul(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b.z}; }
+Vec vec_add(Vec a, Vec b) {
+  Vec c = {a.x + b.x, a.y + b.y, a.z + b.z};
+  return c;
+}
+Vec vec_sub(Vec a, Vec b) {
+  Vec c = {a.x - b.x, a.y - b.y, a.z - b.z};
+  return c;
+}
 Vec vec_nrm(Vec a) {
   float l = vec_len(a);
-  Vec v = {1.0f/l, 1.0f/l, 1.0f/l};
+  Vec v = {1.0f / l, 1.0f / l, 1.0f / l};
   return vec_mul(a, v);
 }
 Vec vec_cross(Vec a, Vec b) {
-  Vec c = {a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x};
+  Vec c = {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
   return c;
 }
 
@@ -140,23 +150,29 @@ Vec perspective(Vec v, Vec x, Vec y, Vec z) {
 
 Vec project(Vec v0, int snap) {
   float ud = DISTANCE;
-  float us = ud-1;
-  float vs = fminf(HEIGHT, WIDTH)/2 * SCALE;
+  float us = ud - 1;
+  float vs = fminf(HEIGHT, WIDTH) / 2 * SCALE;
 
-  Vec v1 = {(v0.x*us)/(v0.z+ud), (v0.y*us)/(v0.z+ud), (v0.z*us)/(v0.z+ud)};
-  Vec v2 = {v1.x*vs+WIDTH/2, v1.y*vs+HEIGHT/2, v1.z+DISTANCE};
+  Vec v1 = {(v0.x * us) / (v0.z + ud), (v0.y * us) / (v0.z + ud),
+            (v0.z * us) / (v0.z + ud)};
+  Vec v2 = {v1.x * vs + WIDTH / 2.0f, v1.y * vs + HEIGHT / 2.0f,
+            v1.z + DISTANCE};
 
-  if (snap) { v2.x = floorf(v2.x); v2.y = floorf(v2.y); }
+  if (snap) {
+    v2.x = floorf(v2.x);
+    v2.y = floorf(v2.y);
+  }
 
   return v2;
 }
 
 Vec barycenter(Vec p, Vec v1, Vec v2, Vec v3) {
-  float d = (v2.y-v3.y) * (v1.x-v3.x) + (v3.x-v2.x) * (v1.y - v3.y);
-  float u = ((v2.y-v3.y) * (p.x-v3.x) + (v3.x-v2.x) * (p.y-v3.y)) / d;
-  float v = ((v3.y-v1.y) * (p.x-v3.x) + (v1.x-v3.x) * (p.y-v3.y)) / d;
+  float d = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
+  float u = ((v2.y - v3.y) * (p.x - v3.x) + (v3.x - v2.x) * (p.y - v3.y)) / d;
+  float v = ((v3.y - v1.y) * (p.x - v3.x) + (v1.x - v3.x) * (p.y - v3.y)) / d;
   float w = 1.0f - u - v;
-  Vec ret = {u, v, w}; return ret;
+  Vec ret = {u, v, w};
+  return ret;
 }
 
 // obj/mtl
@@ -180,7 +196,7 @@ typedef struct {
   Mtl *mtl;
 } Obj;
 
-Mtl* mtl_readfile(const char *filepath) {
+Mtl *mtl_readfile(const char *filepath) {
   FILE *f = fopen(filepath, "r");
   if (f == NULL) error("failed to open mtl file: %s", filepath);
 
@@ -198,7 +214,7 @@ Mtl* mtl_readfile(const char *filepath) {
       newm->next = m;
       m = newm;
     } else if (strncmp(tline, "map_Ka ", 7) == 0 && m != NULL) {
-      char *imgname = strdup(tline+7);
+      char *imgname = strdup(tline + 7);
       char *imgpath = relpath(imgname, filepath);
       Tigr *img = tigrLoadImage(imgpath);
       if (img == NULL) error("failed to open image: {%s}", imgpath);
@@ -206,7 +222,7 @@ Mtl* mtl_readfile(const char *filepath) {
       free(imgpath);
       free(imgname);
     } else if (strncmp(tline, "map_Kd ", 7) == 0 && m != NULL) {
-      char *imgname = strdup(tline+7);
+      char *imgname = strdup(tline + 7);
       char *imgpath = relpath(imgname, filepath);
       Tigr *img = tigrLoadImage(imgpath);
       if (img == NULL) error("failed to open image: {%s}", imgpath);
@@ -220,7 +236,7 @@ Mtl* mtl_readfile(const char *filepath) {
   return m;
 }
 
-Mtl* mtl_get(Mtl *mtl, const char *name) {
+Mtl *mtl_get(Mtl *mtl, const char *name) {
   while (mtl != NULL && strcmp(mtl->name, name) != 0) mtl = mtl->next;
   return mtl;
 }
@@ -237,7 +253,7 @@ void mtl_del(Mtl *mtl) {
   }
 }
 
-Obj* obj_readfile(char *filepath) {
+Obj *obj_readfile(char *filepath) {
   Obj *o = calloc(1, sizeof(Obj));
   o->v = list_new(sizeof(Vec));
   o->vn = list_new(sizeof(Vec));
@@ -268,34 +284,47 @@ Obj* obj_readfile(char *filepath) {
       int i = 0, v1, v2, v3, vt1, vt2, vt3, vn1, vn2, vn3;
       while (++i) {
         int v = 0, vt = 0, vn = 0, nread = 0;
-        if (!(
-          sscanf(line+offset, "%d/%d/%d%n", &v, &vt, &vn, &nread) >= 3 ||
-          sscanf(line+offset, "%d/%d%n", &v, &vt, &nread) >= 2 ||
-          sscanf(line+offset, "%d//%d%n", &v, &vn, &nread) >= 2 ||
-          sscanf(line+offset, "%d%n", &v, &nread) >= 1
-        )) break;
+        if (!(sscanf(line + offset, "%d/%d/%d%n", &v, &vt, &vn, &nread) >= 3 ||
+              sscanf(line + offset, "%d/%d%n", &v, &vt, &nread) >= 2 ||
+              sscanf(line + offset, "%d//%d%n", &v, &vn, &nread) >= 2 ||
+              sscanf(line + offset, "%d%n", &v, &nread) >= 1))
+          break;
         offset += nread;
 
-        if (i == 1) { v1 = v; vt1 = vt; vn1 = vn; continue; }
-        v2 = v3; v3 = v;
-        vt2 = vt3; vt3 = vt;
-        vn2 = vn3; vn3 = vn;
+        if (i == 1) {
+          v1 = v;
+          vt1 = vt;
+          vn1 = vn;
+          continue;
+        }
+        v2 = v3;
+        v3 = v;
+        vt2 = vt3;
+        vt3 = vt;
+        vn2 = vn3;
+        vn3 = vn;
 
         if (i >= 3) {
-          Face f = {
-            .v1=v1, .v2=v2, .v3=v3, .vt1=vt1, .vt2=vt2, .vt3=vt3,
-            .vn1=vn1, .vn2=vn2, .vn3=vn3, .mtl=mtl
-          };
+          Face f = {.v1 = v1,
+                    .v2 = v2,
+                    .v3 = v3,
+                    .vt1 = vt1,
+                    .vt2 = vt2,
+                    .vt3 = vt3,
+                    .vn1 = vn1,
+                    .vn2 = vn2,
+                    .vn3 = vn3,
+                    .mtl = mtl};
           list_add(o->f, &f);
         }
       }
     } else if (strncmp(line, "mtllib ", 7) == 0) {
-      char *mtlname = line+7;
+      char *mtlname = line + 7;
       char *mtlpath = relpath(mtlname, filepath);
       o->mtl = mtl_readfile(mtlpath);
       free(mtlpath);
     } else if (strncmp(line, "usemtl ", 7) == 0) {
-      char *name = line+7;
+      char *name = line + 7;
       mtl = mtl_get(o->mtl, name);
       if (mtl == NULL) error("failed to find mtl: %s", name);
     }
@@ -319,23 +348,26 @@ void obj_normalize(Obj *obj) {
   Vec min = {FLT_MAX, FLT_MAX, FLT_MAX}, max = {FLT_MIN, FLT_MIN, FLT_MIN};
   for (int i = 0; i < obj->v->len; i++) {
     Vec v = VREF(list_get(obj->v, i));
-    min.x = fminf(min.x, v.x); max.x = fmaxf(max.x, v.x);
-    min.y = fminf(min.y, v.y); max.y = fmaxf(max.y, v.y);
-    min.z = fminf(min.z, v.z); max.z = fmaxf(max.z, v.z);
+    min.x = fminf(min.x, v.x);
+    max.x = fmaxf(max.x, v.x);
+    min.y = fminf(min.y, v.y);
+    max.y = fmaxf(max.y, v.y);
+    min.z = fminf(min.z, v.z);
+    max.z = fmaxf(max.z, v.z);
   }
 
   Vec size = vec_sub(max, min);
   float W = fmaxf(fmaxf(size.x, size.y), size.z);
 
   for (int i = 0; i < obj->v->len; i++) {
-    Vec *v = (Vec*)list_get(obj->v, i);
-    v->x = ((v->x - min.x) / W*2 - size.x/W);
-    v->y = -((v->y - min.y) / W*2 - size.y/W);
-    v->z = -((v->z - min.z) / W*2 - size.z/W);
+    Vec *v = (Vec *)list_get(obj->v, i);
+    v->x = ((v->x - min.x) / W * 2 - size.x / W);
+    v->y = -((v->y - min.y) / W * 2 - size.y / W);
+    v->z = -((v->z - min.z) / W * 2 - size.z / W);
   }
 
   for (int i = 0; i < obj->vn->len; i++) {
-    Vec *vn = (Vec*)list_get(obj->vn, i);
+    Vec *vn = (Vec *)list_get(obj->vn, i);
     Vec nrm = vec_nrm(*vn);
     vn->x = nrm.x;
     vn->y = -nrm.y;
@@ -345,12 +377,12 @@ void obj_normalize(Obj *obj) {
 
 void obj_flip(Obj *obj) {
   for (int i = 0; i < obj->v->len; i++) {
-    Vec *v = (Vec*)list_get(obj->v, i);
+    Vec *v = (Vec *)list_get(obj->v, i);
     v->y = -v->y;
     v->z = -v->z;
   }
   for (int i = 0; i < obj->vn->len; i++) {
-    Vec *vn = (Vec*)list_get(obj->vn, i);
+    Vec *vn = (Vec *)list_get(obj->vn, i);
     vn->y = -vn->y;
     vn->z = -vn->z;
   }
@@ -373,8 +405,8 @@ typedef struct {
 } Surface;
 
 int surface_cmp(const void *a, const void *b) {
-  Surface sa = *(Surface*)a;
-  Surface sb = *(Surface*)b;
+  Surface sa = *(Surface *)a;
+  Surface sb = *(Surface *)b;
 
   float amaxz = fmaxf(fmaxf(sa.v1.z, sa.v2.z), sa.v3.z);
   float bmaxz = fmaxf(fmaxf(sb.v1.z, sb.v2.z), sb.v3.z);
@@ -399,7 +431,7 @@ void draw_wireframe(Tigr *scr, Surface sf, TPixel color) {
 }
 
 void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
-  Face f = *(Face*)(list_get(obj->f, sf.idx));
+  Face f = *(Face *)(list_get(obj->f, sf.idx));
 
   Tigr *texture = NULL;
   if (f.mtl) texture = f.mtl->map_Ka ? f.mtl->map_Ka : f.mtl->map_Kd;
@@ -415,23 +447,23 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
   if (state.shading == SHADING_GOURAUD) {
     has_normals = f.vn1 > 0 && f.vn2 > 0 && f.vn3 > 0;
     if (has_normals) {
-      vn1 = vec_nrm(VREF(list_get(obj->vn, f.vn1-1)));
-      vn2 = vec_nrm(VREF(list_get(obj->vn, f.vn2-1)));
-      vn3 = vec_nrm(VREF(list_get(obj->vn, f.vn3-1)));
+      vn1 = vec_nrm(VREF(list_get(obj->vn, f.vn1 - 1)));
+      vn2 = vec_nrm(VREF(list_get(obj->vn, f.vn2 - 1)));
+      vn3 = vec_nrm(VREF(list_get(obj->vn, f.vn3 - 1)));
       vn1 = perspective(vn1, state.x, state.y, state.z);
       vn2 = perspective(vn2, state.x, state.y, state.z);
       vn3 = perspective(vn3, state.x, state.y, state.z);
     }
   }
 
-  Vec vt1 = VREF(list_get(obj->vt, f.vt1-1)),
-      vt2 = VREF(list_get(obj->vt, f.vt2-1)),
-      vt3 = VREF(list_get(obj->vt, f.vt3-1));
+  Vec vt1 = VREF(list_get(obj->vt, f.vt1 - 1)),
+      vt2 = VREF(list_get(obj->vt, f.vt2 - 1)),
+      vt3 = VREF(list_get(obj->vt, f.vt3 - 1));
 
   int minX = fminf(fminf(sf.v1.x, sf.v2.x), sf.v3.x),
-      maxX = fmaxf(fmaxf(sf.v1.x, sf.v2.x), sf.v3.x)+1,
+      maxX = fmaxf(fmaxf(sf.v1.x, sf.v2.x), sf.v3.x) + 1,
       minY = fminf(fminf(sf.v1.y, sf.v2.y), sf.v3.y),
-      maxY = fmaxf(fmaxf(sf.v1.y, sf.v2.y), sf.v3.y)+1;
+      maxY = fmaxf(fmaxf(sf.v1.y, sf.v2.y), sf.v3.y) + 1;
 
   for (int y = minY; y < maxY; y++) {
     for (int x = minX; x < maxX; x++) {
@@ -440,7 +472,7 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
       float err = -0.0001;
       if (bc.x >= err && bc.y >= err && bc.z >= err) {
         if (state.use_zbuffer) {
-          float z = bc.x*sf.v1.z + bc.y*sf.v2.z + bc.z*sf.v3.z;
+          float z = bc.x * sf.v1.z + bc.y * sf.v2.z + bc.z * sf.v3.z;
           int zbuff_idx = y * WIDTH + x;
           if (z > state.zbuff[zbuff_idx]) continue;
           state.zbuff[zbuff_idx] = z;
@@ -450,19 +482,19 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
 
         if (state.use_pcorrect) {
           Vec bcc = bc;
-          bcc.x = bc.x/(sf.v1.z);
-          bcc.y = bc.y/(sf.v2.z);
-          bcc.z = bc.z/(sf.v3.z);
-          float bd = bcc.x+bcc.y+bcc.z;
-          bcc.x = bcc.x/bd;
-          bcc.y = bcc.y/bd;
-          bcc.z = bcc.z/bd;
+          bcc.x = bc.x / (sf.v1.z);
+          bcc.y = bc.y / (sf.v2.z);
+          bcc.z = bc.z / (sf.v3.z);
+          float bd = bcc.x + bcc.y + bcc.z;
+          bcc.x = bcc.x / bd;
+          bcc.y = bcc.y / bd;
+          bcc.z = bcc.z / bd;
 
-          u = bcc.x*vt1.x + bcc.y*vt2.x + bcc.z*vt3.x;
-          v = 1.0-(bcc.x*vt1.y + bcc.y*vt2.y + bcc.z*vt3.y);
+          u = bcc.x * vt1.x + bcc.y * vt2.x + bcc.z * vt3.x;
+          v = 1.0 - (bcc.x * vt1.y + bcc.y * vt2.y + bcc.z * vt3.y);
         } else {
-          u = bc.x*vt1.x + bc.y*vt2.x + bc.z*vt3.x;
-          v = 1.0-(bc.x*vt1.y + bc.y*vt2.y + bc.z*vt3.y);
+          u = bc.x * vt1.x + bc.y * vt2.x + bc.z * vt3.x;
+          v = 1.0 - (bc.x * vt1.y + bc.y * vt2.y + bc.z * vt3.y);
         }
 
         int tx = texture->w * u;
@@ -474,7 +506,7 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
           int s1 = shade(vn1, bc);
           int s2 = shade(vn2, bc);
           int s3 = shade(vn3, bc);
-          shading = bc.x*s1 + bc.y*s2 + bc.z*s3;
+          shading = bc.x * s1 + bc.y * s2 + bc.z * s3;
         }
 
         if (shading >= 0) {
@@ -490,12 +522,16 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
 
 void draw(Tigr *scr, Obj *obj, State state, list *sfaces) {
   for (int i = 0; i < obj->f->len; i++) {
-    Surface *sf = (Surface*)list_get(sfaces, i);
-    Face f = *(Face*)list_get(obj->f, sf->idx);
-    sf->v1 = perspective(VREF(list_get(obj->v, f.v1-1)), state.x, state.y, state.z);
-    sf->v2 = perspective(VREF(list_get(obj->v, f.v2-1)), state.x, state.y, state.z);
-    sf->v3 = perspective(VREF(list_get(obj->v, f.v3-1)), state.x, state.y, state.z);
-    sf->nrm = vec_nrm(vec_cross(vec_sub(sf->v2, sf->v1), vec_sub(sf->v3, sf->v1)));
+    Surface *sf = (Surface *)list_get(sfaces, i);
+    Face f = *(Face *)list_get(obj->f, sf->idx);
+    sf->v1 = perspective(VREF(list_get(obj->v, f.v1 - 1)), state.x, state.y,
+                         state.z);
+    sf->v2 = perspective(VREF(list_get(obj->v, f.v2 - 1)), state.x, state.y,
+                         state.z);
+    sf->v3 = perspective(VREF(list_get(obj->v, f.v3 - 1)), state.x, state.y,
+                         state.z);
+    sf->nrm =
+        vec_nrm(vec_cross(vec_sub(sf->v2, sf->v1), vec_sub(sf->v3, sf->v1)));
     sf->v1 = project(sf->v1, state.jitter);
     sf->v2 = project(sf->v2, state.jitter);
     sf->v3 = project(sf->v3, state.jitter);
@@ -504,13 +540,14 @@ void draw(Tigr *scr, Obj *obj, State state, list *sfaces) {
   if (!state.use_zbuffer) list_sort(sfaces, surface_cmp);
 
   for (int i = 0; i < sfaces->len; i++) {
-    Surface *sf = (Surface*)list_get(sfaces, i);
+    Surface *sf = (Surface *)list_get(sfaces, i);
     if (state.draw_wireframe) {
       draw_wireframe(scr, *sf, tigrRGB(0xFF, 0xFF, 0xFF));
     } else {
       Vec forward = {0, 0, -1};
       float inv = state.inv_bculling ? -1 : 1;
-      if (vec_dot(sf->nrm, forward) * inv > 0) draw_surface(scr, obj, *sf, state);
+      if (vec_dot(sf->nrm, forward) * inv > 0)
+        draw_surface(scr, obj, *sf, state);
     }
   }
 }
@@ -535,9 +572,11 @@ int main(int argc, char **argv) {
   TPixel colorBlack = tigrRGB(0, 0, 0);
 
   State state = {
-    .draw_wireframe=(obj->mtl == NULL),
-    .use_zbuffer=0, .use_pcorrect=0,
-    .inv_bculling=0, .jitter=1,
+      .draw_wireframe = (obj->mtl == NULL),
+      .use_zbuffer = 0,
+      .use_pcorrect = 0,
+      .inv_bculling = 0,
+      .jitter = 1,
   };
   state.zbuff = malloc(sizeof(float) * (WIDTH * HEIGHT));
 
@@ -551,12 +590,16 @@ int main(int argc, char **argv) {
   while (!tigrClosed(screen) && !tigrKeyDown(screen, TK_ESCAPE)) {
     // FPS cap
     elapsed += tigrTime();
-    if (elapsed < 1.0/FPS) { continue; } else { elapsed = 0; }
+    if (elapsed < 1.0 / FPS) {
+      continue;
+    } else {
+      elapsed = 0;
+    }
 
-    if (tigrKeyHeld(screen, TK_LEFT)  && (input = 1)) rotY -= sensitivity;
+    if (tigrKeyHeld(screen, TK_LEFT) && (input = 1)) rotY -= sensitivity;
     if (tigrKeyHeld(screen, TK_RIGHT) && (input = 1)) rotY += sensitivity;
-    if (tigrKeyHeld(screen, TK_DOWN)  && (input = 1)) rotX -= sensitivity;
-    if (tigrKeyHeld(screen, TK_UP)    && (input = 1)) rotX += sensitivity;
+    if (tigrKeyHeld(screen, TK_DOWN) && (input = 1)) rotX -= sensitivity;
+    if (tigrKeyHeld(screen, TK_UP) && (input = 1)) rotX += sensitivity;
     if (tigrKeyDown(screen, 'W') && (input = 1)) state.draw_wireframe ^= 1;
     if (tigrKeyDown(screen, 'Z') && (input = 1)) state.use_zbuffer ^= 1;
     if (tigrKeyDown(screen, 'P') && (input = 1)) state.use_pcorrect ^= 1;
@@ -566,13 +609,14 @@ int main(int argc, char **argv) {
     if (tigrKeyDown(screen, 'R') && (input = 1)) rotX = rotY = 0;
     if (tigrKeyDown(screen, '1') && (input = 1)) state.shading = SHADING_NONE;
     if (tigrKeyDown(screen, '2') && (input = 1)) state.shading = SHADING_FLAT;
-    if (tigrKeyDown(screen, '3') && (input = 1)) state.shading = SHADING_GOURAUD;
+    if (tigrKeyDown(screen, '3') && (input = 1))
+      state.shading = SHADING_GOURAUD;
 
     tigrMouse(screen, &mouseX, &mouseY, &mouseBtn);
     if (mouseBtn & 1) {
       if (mousePrev) {
-        rotY -= (mousePrevX-mouseX)*sensitivity;
-        rotX += (mousePrevY-mouseY)*sensitivity;
+        rotY -= (mousePrevX - mouseX) * sensitivity;
+        rotX += (mousePrevY - mouseY) * sensitivity;
         input = 1;
       }
       mousePrevX = mouseX;
@@ -582,18 +626,26 @@ int main(int argc, char **argv) {
       mousePrev = 0;
     }
 
-    if (!input) { tigrUpdate(screen); continue; } else { input = 0; }
+    if (!input) {
+      tigrUpdate(screen);
+      continue;
+    } else {
+      input = 0;
+    }
 
-    rotX = fminf(PI/2, fmaxf(rotX, -PI/2));
+    rotX = fminf(PI / 2, fmaxf(rotX, -PI / 2));
 
-    Vec z = {cos(rotX)*sin(rotY), -sin(rotX), cos(rotX)*cos(rotY)};
+    Vec z = {cos(rotX) * sin(rotY), -sin(rotX), cos(rotX) * cos(rotY)};
     Vec x = vec_nrm(vec_cross(upward, z));
     Vec y = vec_cross(z, x);
 
     if (state.use_zbuffer)
-      for (int i = 0; i < WIDTH*HEIGHT; state.zbuff[i++] = FLT_MAX);
+      for (int i = 0; i < WIDTH * HEIGHT; state.zbuff[i++] = FLT_MAX)
+        ;
 
-    state.x = x; state.y = y; state.z = z;
+    state.x = x;
+    state.y = y;
+    state.z = z;
     tigrClear(screen, colorBlack);
     draw(screen, obj, state, sfaces);
     tigrUpdate(screen);
