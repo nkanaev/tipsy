@@ -156,31 +156,41 @@ typedef struct {
   float z;
 } Vec;
 
-float vec_dot(Vec a, Vec b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-float vec_len(Vec a) { return sqrtf(vec_dot(a, a)); }
+static inline Vec vec_set(float x, float y, float z) { return (Vec){x, y, z}; }
 
-Vec vec_mul(Vec a, Vec b) { return (Vec){a.x * b.x, a.y * b.y, a.z * b.z}; }
-Vec vec_add(Vec a, Vec b) {
-  Vec c = {a.x + b.x, a.y + b.y, a.z + b.z};
-  return c;
-}
-Vec vec_sub(Vec a, Vec b) {
-  Vec c = {a.x - b.x, a.y - b.y, a.z - b.z};
-  return c;
-}
-Vec vec_nrm(Vec a) {
-  float l = vec_len(a);
-  Vec v = {1.0F / l, 1.0F / l, 1.0F / l};
-  return vec_mul(a, v);
-}
-Vec vec_cross(Vec a, Vec b) {
-  Vec c = {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
-  return c;
+static inline Vec vec_fill(float s) { return vec_set(s, s, s); }
+
+static inline Vec vec_zero() { return vec_fill(0.0F); }
+
+static inline float vec_dot(Vec a, Vec b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-Vec perspective(Vec v, Vec x, Vec y, Vec z) {
-  Vec r = {vec_dot(v, x), vec_dot(v, y), vec_dot(v, z)};
-  return r;
+static inline float vec_len(Vec a) { return sqrtf(vec_dot(a, a)); }
+
+static inline Vec vec_mul(Vec a, Vec b) {
+  return vec_set(a.x * b.x, a.y * b.y, a.z * b.z);
+}
+
+static inline Vec vec_scale(Vec a, float s) { return vec_mul(a, vec_fill(s)); }
+
+static inline Vec vec_add(Vec a, Vec b) {
+  return vec_set(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+static inline Vec vec_sub(Vec a, Vec b) {
+  return vec_set(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+static inline Vec vec_nrm(Vec a) { return vec_scale(a, 1.0F / vec_len(a)); }
+
+static inline Vec vec_cross(Vec a, Vec b) {
+  return vec_set(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
+                 a.x * b.y - a.y * b.x);
+}
+
+static inline Vec perspective(Vec v, Vec x, Vec y, Vec z) {
+  return vec_set(vec_dot(v, x), vec_dot(v, y), vec_dot(v, z));
 }
 
 Vec project(Vec v0, int snap) {
@@ -206,8 +216,7 @@ Vec barycenter(Vec p, Vec v1, Vec v2, Vec v3) {
   float u = ((v2.y - v3.y) * (p.x - v3.x) + (v3.x - v2.x) * (p.y - v3.y)) / d;
   float v = ((v3.y - v1.y) * (p.x - v3.x) + (v1.x - v3.x) * (p.y - v3.y)) / d;
   float w = 1.0F - u - v;
-  Vec ret = {u, v, w};
-  return ret;
+  return vec_set(u, v, w);
 }
 
 // obj/mtl
@@ -500,8 +509,12 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
   Face f = *(Face *)(list_get(obj->f, sf.idx));
 
   Tigr *texture = NULL;
-  if (f.mtl) texture = f.mtl->map_Ka ? f.mtl->map_Ka : f.mtl->map_Kd;
-  if (texture == NULL) return;
+  if (f.mtl) {
+    texture = f.mtl->map_Ka ? f.mtl->map_Ka : f.mtl->map_Kd;
+  }
+  if (texture == NULL) {
+    return;
+  }
 
   int shading = -1;
   int has_normals = 0;
@@ -557,11 +570,10 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
           bcc.x = bc.x / (sf.v1.z);
           bcc.y = bc.y / (sf.v2.z);
           bcc.z = bc.z / (sf.v3.z);
-          float bd = bcc.x + bcc.y + bcc.z;
+          const float bd = bcc.x + bcc.y + bcc.z;
           bcc.x = bcc.x / bd;
           bcc.y = bcc.y / bd;
           bcc.z = bcc.z / bd;
-
           u = bcc.x * vt1.x + bcc.y * vt2.x + bcc.z * vt3.x;
           v = 1.0F - (bcc.x * vt1.y + bcc.y * vt2.y + bcc.z * vt3.y);
         } else {
