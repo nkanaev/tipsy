@@ -194,6 +194,14 @@ static inline Vec perspective(Vec v, Vec x, Vec y, Vec z) {
   return vec_set(vec_dot(v, x), vec_dot(v, y), vec_dot(v, z));
 }
 
+// Performs a linear combination or matrix-vector multiplication:
+// `v' := u * a + v * b + w * c`
+static inline Vec interpolate(Vec bary_coords, Vec a, Vec b, Vec c) {
+  return vec_add(
+      vec_add(vec_scale(a, bary_coords.x), vec_scale(b, bary_coords.y)),
+      vec_scale(c, bary_coords.z));
+}
+
 Vec project(Vec v0, int snap) {
   const float ud = DISTANCE;
   const float us = ud - 1.0F;
@@ -324,6 +332,28 @@ void mtl_del(Mtl *mtl) {
   }
 }
 
+typedef enum { V_LINE, VN_LINE, VT_LINE } LineType;
+
+void parse_attribute(Obj *o, char *line, LineType type) {
+  Vec v = vec_zero();
+  const char *const formats[] = {"v %f %f %f", "vn %f %f %f", "vt %f %f %f"};
+  sscanf(line, formats[type], &v.x, &v.y, &v.z);
+
+  switch (type) {
+    case V_LINE:
+      list_add(o->v, &v);
+      break;
+    case VN_LINE:
+      list_add(o->vn, &v);
+      break;
+    case VT_LINE:
+      list_add(o->vt, &v);
+      break;
+    default:
+      break;
+  }
+}
+
 Obj *obj_readfile(char *filepath) {
   Obj *o = calloc(1, sizeof(Obj));
   o->v = list_new(sizeof(Vec));
@@ -344,14 +374,11 @@ Obj *obj_readfile(char *filepath) {
   while (readline(&line, &len, f) != -1) {
     Vec v = {0, 0, 0};
     if (strncmp(line, "v ", 2) == 0) {
-      sscanf(line, "v %f %f %f", &v.x, &v.y, &v.z);
-      list_add(o->v, &v);
+      parse_attribute(o, line, V_LINE);
     } else if (strncmp(line, "vn ", 3) == 0) {
-      sscanf(line, "vn %f %f %f", &v.x, &v.y, &v.z);
-      list_add(o->vn, &v);
+      parse_attribute(o, line, VN_LINE);
     } else if (strncmp(line, "vt ", 3) == 0) {
-      sscanf(line, "vt %f %f %f", &v.x, &v.y, &v.z);
-      list_add(o->vt, &v);
+      parse_attribute(o, line, VT_LINE);
     } else if (strncmp(line, "f ", 2) == 0) {
       int offset = 2;
       int i = 0;
@@ -500,8 +527,10 @@ int surface_cmp(const void *a, const void *b) {
   float amaxz = fmaxf(fmaxf(sa.v1.z, sa.v2.z), sa.v3.z);
   float bmaxz = fmaxf(fmaxf(sb.v1.z, sb.v2.z), sb.v3.z);
 
-  int apoints = (sa.v1.z < bmaxz) + (sa.v2.z < bmaxz) + (sa.v3.z < bmaxz);
-  int bpoints = (sb.v1.z < amaxz) + (sb.v2.z < amaxz) + (sb.v3.z < amaxz);
+  int apoints = (sa.v1.z < bmaxz ? 1 : 0) + (sa.v2.z < bmaxz ? 1 : 0) +
+                (sa.v3.z < bmaxz ? 1 : 0);
+  int bpoints = (sb.v1.z < amaxz ? 1 : 0) + (sb.v2.z < amaxz ? 1 : 0) +
+                (sb.v3.z < amaxz ? 1 : 0);
 
   return apoints - bpoints;
 }
@@ -592,8 +621,9 @@ void draw_surface(Tigr *scr, Obj *obj, Surface sf, State state) {
           u = bcc.x * vt1.x + bcc.y * vt2.x + bcc.z * vt3.x;
           v = 1.0F - (bcc.x * vt1.y + bcc.y * vt2.y + bcc.z * vt3.y);
         } else {
-          u = bc.x * vt1.x + bc.y * vt2.x + bc.z * vt3.x;
-          v = 1.0F - (bc.x * vt1.y + bc.y * vt2.y + bc.z * vt3.y);
+          const Vec interpoalted_vt = interpolate(bc, vt1, vt2, vt3);
+          u = interpoalted_vt.x;
+          v = 1.0F - interpoalted_vt.y;
         }
 
         int tx = (int)((float)texture->w * u);
@@ -688,8 +718,8 @@ int main(int argc, char *argv[]) {
   Vec upward = {0, 1, 0};
   float rotX = 0;
   float rotY = 0;
-  const float INITIAL_SENSITIVITY = 5E-2F;
-  float sensitivity = INITIAL_SENSITIVITY;
+  const float initial_sensitivity = 5E-2F;
+  float sensitivity = initial_sensitivity;
   int mouseX;
   int mouseY;
   int mouseBtn;
