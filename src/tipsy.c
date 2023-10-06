@@ -215,6 +215,7 @@ Vec project(Vec v0, int snap) {
 }
 
 Vec barycenter(Vec p, Vec a, Vec b, Vec c) {
+  // Use Cramer's rule to compute barycentric coordinates.
   const Vec ab = vec_sub(b, a);
   const Vec ac = vec_sub(c, a);
   const Vec ap = vec_sub(p, a);
