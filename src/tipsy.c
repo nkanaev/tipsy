@@ -883,23 +883,13 @@ int main(int argc, char *argv[]) {
 
     rotX = fminf(PI / 2, fmaxf(rotX, -PI / 2));
 
-    const Quaternion rotor_x =
-        quaternion_rotation_axis(vec_set(1.0F, 0.0F, 0.0F), rotX);
-    const Quaternion rotor_y =
+    Quaternion rotor =
         quaternion_rotation_axis(vec_set(0.0F, 1.0F, 0.0F), rotY);
-    Vec z = vec_rotate(upward, rotor_y);
-    z = vec_rotate(z, rotor_y);
-
-    // Define the world axes.
-    const Vec world_x = vec_set(1.0F, 0.0F, 0.0F);
-    const Vec world_y = vec_set(0.0F, 1.0F, 0.0F);
-    const Vec world_z = vec_set(0.0F, 0.0F, 1.0F);
-
-    // Rotate the world axes.
-    Vec x = vec_rotate(world_x, rotor_x);
-    x = vec_rotate(x, rotor_y);
-    Vec y = vec_rotate(world_y, rotor_x);
-    y = vec_rotate(y, rotor_y);
+    rotor = quaternion_multiply(
+        rotor, quaternion_rotation_axis(vec_set(1.0F, 0.0F, 0.0F), rotX));
+    Vec z = vec_rotate(vec_set(0.0F, 0.0F, 1.0F), rotor);
+    Vec x = vec_nrm(vec_cross(upward, z));
+    Vec y = vec_cross(z, x);
 
     if (state.use_zbuffer) {
       if (state.use_zbuffer) {
